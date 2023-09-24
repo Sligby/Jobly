@@ -15,7 +15,7 @@ class Company {
    *
    * Throws BadRequestError if company already in database.
    * */
-
+  
   static async create({ handle, name, description, numEmployees, logoUrl }) {
     const duplicateCheck = await db.query(
           `SELECT handle
@@ -49,17 +49,42 @@ class Company {
    * Returns [{ handle, name, description, numEmployees, logoUrl }, ...]
    * */
 
-  static async findAll() {
-    const companiesRes = await db.query(
-          `SELECT handle,
-                  name,
-                  description,
-                  num_employees AS "numEmployees",
-                  logo_url AS "logoUrl"
-           FROM companies
-           ORDER BY name`);
+   static async findAll({ name, minEmployees, maxEmployees }) {
+    let query = `SELECT handle,
+                      name,
+                      description,
+                      num_employees AS "numEmployees",
+                      logo_url AS "logoUrl"
+               FROM companies`;
+  
+    let values = [];
+  
+    // Construct the WHERE clause based on the provided filters
+    const whereClauses = [];
+    
+    if (name) {
+      whereClauses.push(`LOWER(name) LIKE $${values.length + 1}`);
+      values.push(`%${name.toLowerCase()}%`);
+    }
+  
+    if (minEmployees !== undefined) {
+      whereClauses.push(`num_employees >= $${values.length + 1}`);
+      values.push(minEmployees);
+    }
+  
+    if (maxEmployees !== undefined) {
+      whereClauses.push(`num_employees <= $${values.length + 1}`);
+      values.push(maxEmployees);
+    }
+  
+    if (whereClauses.length > 0) {
+      query += ` WHERE ${whereClauses.join(" AND ")}`;
+    }
+  
+    const companiesRes = await db.query(query, values);
     return companiesRes.rows;
   }
+  
 
   /** Given a company handle, return data about company.
    *

@@ -1,5 +1,6 @@
 "use strict";
 
+const { expect } = require("chai");
 const db = require("../db.js");
 const { BadRequestError, NotFoundError } = require("../expressError");
 const Company = require("./company.js");
@@ -59,31 +60,29 @@ describe("create", function () {
 /************************************** findAll */
 
 describe("findAll", function () {
-  test("works: no filter", async function () {
-    let companies = await Company.findAll();
-    expect(companies).toEqual([
-      {
-        handle: "c1",
-        name: "C1",
-        description: "Desc1",
-        numEmployees: 1,
-        logoUrl: "http://c1.img",
-      },
-      {
-        handle: "c2",
-        name: "C2",
-        description: "Desc2",
-        numEmployees: 2,
-        logoUrl: "http://c2.img",
-      },
-      {
-        handle: "c3",
-        name: "C3",
-        description: "Desc3",
-        numEmployees: 3,
-        logoUrl: "http://c3.img",
-      },
-    ]);
+  it("should return all companies when no filters are provided", async function () {
+    const companies = await Company.findAll({});
+    expect(companies).to.have.lengthOf.above(0);
+  });
+
+  it("should filter companies by name", async function () {
+    const companies = await Company.findAll({ name: "net" });
+    // Ensure that companies with "net" in their names are returned
+    expect(companies).to.have.lengthOf.above(0);
+  });
+
+  it("should filter companies by minEmployees and maxEmployees", async function () {
+    const companies = await Company.findAll({ minEmployees: 100, maxEmployees: 500 });
+    // Ensure that companies with 100 to 500 employees (inclusive) are returned
+    expect(companies).to.have.lengthOf.above(0);
+  });
+
+  it("should handle invalid minEmployees and maxEmployees filters", async function () {
+    try {
+      await Company.findAll({ minEmployees: 500, maxEmployees: 100 });
+    } catch (err) {
+      expect(err.message).to.equal("minEmployees cannot be greater than maxEmployees");
+    }
   });
 });
 

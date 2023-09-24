@@ -49,15 +49,22 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
  *
  * Authorization required: none
  */
-
-router.get("/", async function (req, res, next) {
+ router.get("/", async function (req, res, next) {
   try {
-    const companies = await Company.findAll();
+    const { name, minEmployees, maxEmployees } = req.query;
+
+    // Validate minEmployees and maxEmployees
+    if (minEmployees !== undefined && maxEmployees !== undefined && minEmployees > maxEmployees) {
+      throw new BadRequestError("minEmployees cannot be greater than maxEmployees");
+    }
+
+    const companies = await Company.findAll({ name, minEmployees, maxEmployees });
     return res.json({ companies });
   } catch (err) {
     return next(err);
   }
 });
+
 
 /** GET /[handle]  =>  { company }
  *
@@ -67,11 +74,27 @@ router.get("/", async function (req, res, next) {
  * Authorization required: none
  */
 
-router.get("/:handle", async function (req, res, next) {
+ router.get("/:handle", async function (req, res, next) {
   try {
-    const company = await Company.get(req.params.handle);
+    const { handle } = req.params;
+
+    // Get company information
+    const company = await Company.get(handle);
+
+    // Get jobs associated with the company
+    const jobsRes = await db.query(
+      `SELECT id, title, salary, equity
+       FROM jobs
+       WHERE company_handle = $1`,
+      [handle]
+    );
+
+    // Attach the jobs data to the company object
+    company.jobs = jobsRes.rows;
+
     return res.json({ company });
-  } catch (err) {
+  }
+   catch (err) {
     return next(err);
   }
 });
